@@ -8,7 +8,7 @@ pnpm test:watch
 ```
 
 No database, no browser, no Docker, no network. The logic under test is pure, which is why
-two operators racing for the same incident is a unit test here rather than something you
+two engineers racing for the same work order is a unit test here rather than something you
 reproduce by hand with two browser windows and good timing.
 
 ## What is covered
@@ -39,7 +39,7 @@ lease and the version catch different things. A design with only one of them pas
 first racing test and fails this one.
 
 **"treats the exact expiry instant as expired".** Somebody has to own the boundary, or an
-incident is briefly claimable by nobody.
+work order is briefly claimable by nobody.
 
 ## Conventions
 
@@ -64,7 +64,7 @@ afterwards, a test asserts what the code does, which is not the same as what it 
 ## One test that was wrong
 
 A message test asserted the output contained no hyphen, as a way of proving the countdown
-was never negative. The operator identifier contains a hyphen, so it failed against
+was never negative. The engineer identifier contains a hyphen, so it failed against
 perfectly correct code. The assertion was rewritten to read the countdown value directly.
 
 Recorded because a red test is not automatically a bug in the code, and treating it as one

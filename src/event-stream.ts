@@ -1,10 +1,10 @@
 /**
  * The client-side event stream.
  *
- * This is the piece that decides what an operator actually sees. Events arrive over a
+ * This is the piece that decides what an engineer actually sees. Events arrive over a
  * socket that drops, on a network that reorders, sometimes twice, and sometimes with a
  * gap in the middle. Everything below is about making that produce a correct, ordered,
- * gap-free view without the operator ever needing to press refresh.
+ * gap-free view without the engineer ever needing to press refresh.
  *
  * The rules, in order of how much they matter:
  *
@@ -18,9 +18,9 @@
  *      slower than one read.
  */
 
-export interface IncidentEvent {
-  readonly incidentId: string;
-  /** Per-incident, monotonic, allocated by the server inside the writing transaction. */
+export interface WorkOrderEvent {
+  readonly workOrderId: string;
+  /** Per-workOrder, monotonic, allocated by the server inside the writing transaction. */
   readonly sequence: number;
   readonly type: string;
   readonly occurredAt: string;
@@ -29,9 +29,9 @@ export interface IncidentEvent {
 
 export interface StreamState {
   /** Events applied, always contiguous and always in sequence order. */
-  readonly applied: readonly IncidentEvent[];
+  readonly applied: readonly WorkOrderEvent[];
   /** Arrived early, waiting for the gap in front of them to fill. */
-  readonly buffered: readonly IncidentEvent[];
+  readonly buffered: readonly WorkOrderEvent[];
   readonly appliedThrough: number;
   readonly droppedDuplicates: number;
 }
@@ -58,7 +58,7 @@ export interface ApplyOutcome {
   readonly needsRefetch: boolean;
 }
 
-export function applyEvent(state: StreamState, incoming: IncidentEvent): ApplyOutcome {
+export function applyEvent(state: StreamState, incoming: WorkOrderEvent): ApplyOutcome {
   // Already seen. This is the common case after a reconnect, where the replay overlaps
   // with what was received before the drop.
   if (incoming.sequence <= state.appliedThrough) {
@@ -106,7 +106,7 @@ export function applyEvent(state: StreamState, incoming: IncidentEvent): ApplyOu
 }
 
 /** Applies a batch, which is what a resume response delivers. */
-export function applyBatch(state: StreamState, events: readonly IncidentEvent[]): ApplyOutcome {
+export function applyBatch(state: StreamState, events: readonly WorkOrderEvent[]): ApplyOutcome {
   let current = state;
   let needsRefetch = false;
 

@@ -69,8 +69,8 @@ would say.
 ```bash
 pnpm lint
 pnpm typecheck
-pnpm --filter @guardianlink/api test
-pnpm --filter @guardianlink/api test:e2e
+pnpm --filter @engitrack/api test
+pnpm --filter @engitrack/api test:e2e
 ```
 
 A failing test is fixed by understanding the cause. Changing the assertion so it passes is the single

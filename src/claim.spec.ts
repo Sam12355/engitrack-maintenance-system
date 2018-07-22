@@ -14,21 +14,21 @@ import {
 } from './claim';
 
 const NOW = 1_773_000_000_000;
-const ALICE = 'operator-alice';
-const BOB = 'operator-bob';
+const ALICE = 'engineer-alice';
+const BOB = 'engineer-bob';
 
 const unclaimed: ClaimState = {
-  incidentId: 'incident-1',
+  workOrderId: 'workOrder-1',
   holderId: null,
   claimedAt: null,
   expiresAt: null,
   version: 0,
 };
 
-function claimedBy(operatorId: string, at = NOW, version = 1): ClaimState {
+function claimedBy(engineerId: string, at = NOW, version = 1): ClaimState {
   return {
-    incidentId: 'incident-1',
-    holderId: operatorId,
+    workOrderId: 'workOrder-1',
+    holderId: engineerId,
     claimedAt: at,
     expiresAt: at + LEASE_MS,
     version,
@@ -36,7 +36,7 @@ function claimedBy(operatorId: string, at = NOW, version = 1): ClaimState {
 }
 
 describe('claiming', () => {
-  it('lets an operator claim an unheld incident', () => {
+  it('lets an engineer claim an unheld workOrder', () => {
     const result = claim(unclaimed, ALICE, 0, NOW);
 
     expect(result.ok).toBe(true);
@@ -47,18 +47,18 @@ describe('claiming', () => {
     expect(result.state.version).toBe(1);
   });
 
-  it('refuses a second operator while the lease is live', () => {
+  it('refuses a second engineer while the lease is live', () => {
     const result = claim(claimedBy(ALICE), BOB, 1, NOW + 1_000);
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.kind).toBe('held_by_other');
     if (result.error.kind !== 'held_by_other') return;
-    // Naming the holder saves the losing operator a trip to Slack.
+    // Naming the holder saves the losing engineer a trip to Slack.
     expect(result.error.holderId).toBe(ALICE);
   });
 
-  it('lets another operator take over once the lease has lapsed', () => {
+  it('lets another engineer take over once the lease has lapsed', () => {
     const result = claim(claimedBy(ALICE), BOB, 1, NOW + LEASE_MS + 1);
 
     expect(result.ok).toBe(true);
@@ -67,7 +67,7 @@ describe('claiming', () => {
   });
 
   it('treats the exact expiry instant as expired', () => {
-    // Somebody has to own the boundary. Expiry does, so an incident is never briefly
+    // Somebody has to own the boundary. Expiry does, so an workOrder is never briefly
     // unavailable to everyone.
     const result = claim(claimedBy(ALICE), BOB, 1, NOW + LEASE_MS);
     expect(result.ok).toBe(true);
@@ -94,11 +94,11 @@ describe('claiming', () => {
 });
 
 describe('lease state', () => {
-  it('reports an unclaimed incident as not held', () => {
+  it('reports an unclaimed workOrder as not held', () => {
     expect(isHeld(unclaimed, NOW)).toBe(false);
   });
 
-  it('reports a lapsed lease as not held, so the incident gets picked up', () => {
+  it('reports a lapsed lease as not held, so the workOrder gets picked up', () => {
     expect(isHeld(claimedBy(ALICE), NOW + LEASE_MS + 1)).toBe(false);
   });
 
@@ -142,7 +142,7 @@ describe('releasing', () => {
   });
 
   it('treats releasing an already-lapsed lease as success', () => {
-    // The operator's intent is already satisfied. An error here is noise.
+    // The engineer's intent is already satisfied. An error here is noise.
     const result = release(claimedBy(ALICE), ALICE, 1, NOW + LEASE_MS + 1);
     expect(result.ok).toBe(true);
   });
@@ -168,8 +168,8 @@ describe('mutation authorisation', () => {
   });
 
   it('blocks a mutation from the holder acting on a stale view', () => {
-    // Version and lease catch different things: this operator holds the claim but is
-    // looking at an incident that has moved on since they loaded it.
+    // Version and lease catch different things: this engineer holds the claim but is
+    // looking at an workOrder that has moved on since they loaded it.
     const result = authoriseMutation(claimedBy(ALICE, NOW, 5), ALICE, 2, NOW + 1_000);
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -177,8 +177,8 @@ describe('mutation authorisation', () => {
   });
 });
 
-describe('two operators racing', () => {
-  it('gives the incident to exactly one of them', () => {
+describe('two engineers racing', () => {
+  it('gives the workOrder to exactly one of them', () => {
     // Both consoles loaded version 0 and both pressed claim.
     const alice = claim(unclaimed, ALICE, 0, NOW);
     expect(alice.ok).toBe(true);
@@ -190,7 +190,7 @@ describe('two operators racing', () => {
     expect(bob.ok).toBe(false);
     if (bob.ok) return;
     // Version, not the lease, is what catches this one: Bob is acting on a view of the
-    // incident that predates Alice's claim.
+    // workOrder that predates Alice's claim.
     expect(bob.error.kind).toBe('stale_version');
   });
 
@@ -206,7 +206,7 @@ describe('two operators racing', () => {
   });
 });
 
-describe('messages shown to the operator', () => {
+describe('messages shown to the engineer', () => {
   it('says who holds it and how long the claim has left', () => {
     const message = explain(
       { kind: 'held_by_other', holderId: ALICE, expiresAt: NOW + 90_000 },
@@ -216,7 +216,7 @@ describe('messages shown to the operator', () => {
     expect(message).toContain('90s');
   });
 
-  it('tells a stale operator to reload rather than showing an error code', () => {
+  it('tells a stale engineer to reload rather than showing an error code', () => {
     expect(explain({ kind: 'stale_version', expected: 1, actual: 4 }, NOW)).toMatch(/reload/i);
   });
 
@@ -226,7 +226,7 @@ describe('messages shown to the operator', () => {
       NOW,
     );
 
-    // Asserting the message contains no hyphen would be wrong: the operator identifier
+    // Asserting the message contains no hyphen would be wrong: the engineer identifier
     // has one. The claim being tested is about the countdown, so read the countdown.
     const seconds = /lapses in (-?\d+)s/.exec(message)?.[1];
     expect(seconds).toBe('0');

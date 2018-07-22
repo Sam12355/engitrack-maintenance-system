@@ -28,8 +28,8 @@ it exists.
 
 ## Why there is no framework here
 
-The hard part of an incident console is not rendering a list. It is deciding what to render
-when events arrive twice, out of order, with a gap in the middle, while a second operator
+The hard part of a work order console is not rendering a list. It is deciding what to render
+when events arrive twice, out of order, with a gap in the middle, while a second engineer
 is mutating the same record.
 
 That decision is a function from state and an event to new state. Burying it in a component,
@@ -50,8 +50,8 @@ sharp.
 
 ```ts
 StreamState = {
-  applied: IncidentEvent[]   // contiguous, in sequence order
-  buffered: IncidentEvent[]  // arrived early, waiting for the gap in front
+  applied: WorkOrderEvent[]   // contiguous, in sequence order
+  buffered: WorkOrderEvent[]  // arrived early, waiting for the gap in front
   appliedThrough: number     // highest applied. The resume point
   droppedDuplicates: number  // diagnostic
 }
@@ -94,11 +94,11 @@ trivially independent.
 to handle the conflict case to compile, which is the point: a conflict is a normal outcome
 here, not an exceptional one.
 
-**Messages, not codes.** `explain()` returns a sentence for the operator. An operator under
+**Messages, not codes.** `explain()` returns a sentence for the engineer. An engineer under
 time pressure needs to know what happened and what to do, not which enum member came back.
 
-**No fairness mechanism.** An operator can claim and release repeatedly to monopolise an
-incident. Visible in the audit log, not prevented. Adding fairness needs a queue and a
+**No fairness mechanism.** An engineer can claim and release repeatedly to monopolise an
+work order. Visible in the audit log, not prevented. Adding fairness needs a queue and a
 policy, and both are more product decision than engineering one.
 
 ## What a host application has to provide

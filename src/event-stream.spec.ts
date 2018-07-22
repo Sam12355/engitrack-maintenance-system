@@ -8,12 +8,12 @@ import {
   hasGap,
   missingSequences,
   resumePoint,
-  type IncidentEvent,
+  type WorkOrderEvent,
 } from './event-stream';
 
-function event(sequence: number, type = 'incident.location_recorded'): IncidentEvent {
+function event(sequence: number, type = 'workOrder.location_recorded'): WorkOrderEvent {
   return {
-    incidentId: 'incident-1',
+    workOrderId: 'workOrder-1',
     sequence,
     type,
     occurredAt: '2026-03-14T19:45:00.000Z',
@@ -37,7 +37,7 @@ describe('out-of-order delivery', () => {
     let state = applyEvent(emptyStream, event(1)).state;
     state = applyEvent(state, event(3)).state;
 
-    // Applying 3 while 2 is missing would put an operator note above the action it
+    // Applying 3 while 2 is missing would put an engineer note above the action it
     // describes.
     expect(state.applied.map((e) => e.sequence)).toEqual([1]);
     expect(state.buffered.map((e) => e.sequence)).toEqual([3]);

@@ -7,7 +7,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ### Planned
 - Contract tests running the same suite against a Postgres-backed sequence allocator
-- A fairness policy, so repeated claim-and-release cannot monopolise an incident
+- A fairness policy, so repeated claim-and-release cannot monopolise a work order
 
 ## [0.1.0] - 2026-03
 
@@ -17,11 +17,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - Resume-point calculation from the highest applied sequence
 - Claim leases with self-expiry, renewal and holder-only release
 - Optimistic concurrency guard combining version and lease
-- Operator-facing explanations for every refusal, as sentences rather than error codes
+- Engineer-facing explanations for every refusal, as sentences rather than error codes
 
 ### Fixed during development
 - A message test asserted the output contained no hyphen, as a proxy for the countdown never
-  being negative. The operator identifier contains a hyphen, so it failed against correct
+  being negative. The engineer identifier contains a hyphen, so it failed against correct
   code. The assertion now reads the countdown value. The test was wrong, not the code
 
 ### Verification

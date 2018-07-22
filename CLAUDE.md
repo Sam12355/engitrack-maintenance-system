@@ -5,15 +5,15 @@ the part specific to this repository.
 
 ## What this repository is
 
-Pure decision logic for multi-operator incident handling: event ordering, gap recovery,
+Pure decision logic for multi-engineer work order handling: event ordering, gap recovery,
 claim leases, optimistic concurrency. No transport, no persistence, no UI. That is the
 boundary, and it is the first thing to preserve.
 
 ## Non-negotiables here
 
 **Everything stays pure.** No I/O, no timers, no `Date.now()`, no `Math.random()`. Time
-arrives as a parameter on every function that needs it. This is what makes "two operators
-race for the same incident" a unit test rather than something you reproduce with two
+arrives as a parameter on every function that needs it. This is what makes "two engineers
+race for the same work order" a unit test rather than something you reproduce with two
 browser windows and good timing. A change that introduces a dependency on the clock or the
 network has broken the thing the repository exists for.
 
@@ -56,7 +56,7 @@ the concurrency section.
 
 ## Things that have gone wrong here
 
-- A test asserting a message contained no hyphen, when the operator identifier has one.
+- A test asserting a message contained no hyphen, when the engineer identifier has one.
   The test was wrong, not the code. Check what an assertion actually proves before
   trusting a red result.
 - Reaching for a recursive helper that terminates by injecting synthetic state. It

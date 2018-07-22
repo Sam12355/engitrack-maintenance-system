@@ -1,4 +1,4 @@
-# Local stack for the incident console.
+# Local stack for the workOrder console.
 #
 #   docker compose up -d
 #
@@ -6,18 +6,18 @@
 # `pnpm test` touches none of these services. This is here for driving the thing by hand
 # against real backing stores.
 
-name: guardianlink-incident-console
+name: engitrack-maintenance-system
 
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: guardianlink
-      POSTGRES_PASSWORD: guardianlink
-      POSTGRES_DB: guardianlink
+      POSTGRES_USER: engitrack
+      POSTGRES_PASSWORD: engitrack
+      POSTGRES_DB: engitrack
     ports: ['5432:5432']
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U guardianlink']
+      test: ['CMD-SHELL', 'pg_isready -U engitrack']
       interval: 5s
       timeout: 3s
       retries: 20
@@ -42,6 +42,6 @@ services:
     environment:
       NODE_ENV: development
       PORT: '3002'
-      DATABASE_URL: postgres://guardianlink:guardianlink@postgres:5432/guardianlink
+      DATABASE_URL: postgres://engitrack:engitrack@postgres:5432/engitrack
       REDIS_URL: redis://redis:6379
     ports: ['3002:3002']

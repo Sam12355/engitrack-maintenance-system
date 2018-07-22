@@ -21,7 +21,7 @@ Small commits, Conventional Commits, one logical change each.
 ## Conventions specific to this repository
 
 **Everything stays pure.** No I/O, no timers, no `Date.now()`. Time is a parameter on
-every function that needs it. That is what makes two operators racing a unit test rather
+every function that needs it. That is what makes two engineers racing a unit test rather
 than something reproduced by hand with two browser windows.
 
 **Order by sequence, never timestamp.** If you are comparing `occurredAt` to decide

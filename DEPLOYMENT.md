@@ -3,7 +3,7 @@
 **Not deployed anywhere. It is a service, and it runs locally.**
 
 A NestJS service on in-memory adapters by default, so `pnpm dev` needs nothing installed.
-The console UI and the production persistence live in `guardianlink-platform`.
+The console UI and the production persistence live in `engitrack-platform`.
 
 ## Running it
 

@@ -15,9 +15,9 @@ broken baseline.
 
 ## What this repository is
 
-Pure decision logic for multi-operator incident handling: event ordering, gap recovery,
+Pure decision logic for multi-engineer work order handling: event ordering, gap recovery,
 claim leases, optimistic concurrency. No transport, no persistence, no UI. The running
-console is `guardianlink-platform`.
+console is `engitrack-platform`.
 
 ## Order of operations
 
