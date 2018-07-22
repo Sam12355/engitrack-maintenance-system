@@ -5,7 +5,7 @@
 
 ## Product request
 
-> Operators keep losing the connection on the office wifi. When it comes back the incident
+> Engineers keep losing the connection on the office wifi. When it comes back the work order
 > list looks fine, but they have told me twice now that they missed a note somebody added
 > while they were disconnected.
 

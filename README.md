@@ -1,12 +1,25 @@
-# guardianlink-incident-console
+# engitrack-maintenance-system
 
-**What happens when two operators work the same incident at once, on a connection that
+**What happens when two engineers work the same work order at once, on a connection that
 keeps dropping, with events arriving in the wrong order.**
 
-> Part of the [GuardianLink portfolio](../PORTFOLIO.md). A demonstration, not a real
-> safety service.
+> Part of the [portfolio](../PORTFOLIO.md). A demonstration, not a system anybody schedules
+> maintenance with.
 
-The flagship platform answers "can an operator work an incident". This repository answers
+> **A reconstruction, not an employer's codebase.** I worked on engineering maintenance
+> software in 2015 and 2016, and the console was where the interesting failures lived: two
+> engineers claiming the same job, a laptop lid closing on a held record, a site connection
+> that dropped every few minutes. This repository is that problem rebuilt from scratch. No
+> code, schema or copy came from an employer.
+>
+> **The original was ASP.NET MVC 5 and C#**, on SQL Server with Entity Framework 6, jQuery
+> and Bootstrap 3 on the front end, and SignalR for the live updates. What is here is a
+> modern TypeScript reconstruction. Porting it back to 2015 tooling would have been a large
+> rewrite that demonstrated nothing about the concurrency problem, which is the whole point
+> of the repository, so I did not do it. Where the era matters to a decision, the document
+> says so.
+
+The flagship platform answers "can an engineer work a work order". This repository answers
 the harder question underneath it, and takes that one problem as far as it goes.
 
 [![tests](https://img.shields.io/badge/tests-54%20passing-brightgreen)](docs/test-results/)
@@ -16,15 +29,15 @@ the harder question underneath it, and takes that one problem as far as it goes.
 
 ## The problem
 
-An incident console has properties a normal CRUD screen does not:
+A work order console has properties a normal CRUD screen does not:
 
-- **Two operators, one incident.** Both open it, both start working, and without something
+- **Two engineers, one work order.** Both open it, both start working, and without something
   in the way neither finds out until one overwrites the other.
-- **An operator who walks away.** A claim with no expiry means an incident sits
-  unavailable while nobody works it.
-- **A flaky connection.** Sockets drop mid-incident. When one comes back, the client has
+- **An engineer who walks away.** A claim with no expiry means a work order sits
+  unavailable while nobody works it. On a plant floor that is a job nobody is doing.
+- **A flaky connection.** Sockets drop while a job is open. When one comes back, the client has
   a partial view and does not know what it missed.
-- **Out-of-order delivery.** Mobile and proxy networks reorder. Rendering an operator note
+- **Out-of-order delivery.** Mobile and proxy networks reorder. Rendering an engineer note
   above the action it describes is worse than not rendering it yet.
 - **Wrong clocks.** Device and server time disagree, so timestamps cannot order anything.
 
@@ -40,7 +53,7 @@ flowchart TB
         RESUME["Resume point<br/>highest applied, never highest received"]
     end
     subgraph server["Server"]
-        SEQ["Per-incident sequence<br/>allocated inside the write transaction"]
+        SEQ["Per-work order sequence<br/>allocated inside the write transaction"]
         LEASE["Claim lease<br/>exclusive, self-expiring"]
         VER["Version check<br/>WHERE version = n"]
     end
@@ -52,7 +65,7 @@ flowchart TB
 
 ### Event ordering
 
-Events carry a per-incident sequence allocated by the database inside the writing
+Events carry a per-work order sequence allocated by the database inside the writing
 transaction, so two concurrent writers cannot both decide they are number seven. The
 client orders by it and never by a timestamp.
 
@@ -72,16 +85,16 @@ wrong one skips events for ever. There is a test for exactly that.
 ### Claim leases
 
 A claim is exclusive while held and expires on its own after five minutes. Re-claiming your
-own incident extends the lease and emits nothing new, because operators keep a tab open for
+own work order extends the lease and emits nothing new, because engineers keep a tab open for
 a long time and a timeline full of "claimed by the same person again" is noise.
 
 Mutations are guarded by **two** independent checks:
 
-- **Version**: is this operator acting on a current view of the incident?
-- **Lease**: does this operator currently hold it?
+- **Version**: is this engineer acting on a current view of the work order?
+- **Lease**: does this engineer currently hold it?
 
-They catch different failures. An operator can hold the claim and still be looking at a
-stale incident; another can be up to date and have had the claim taken from them. Either
+They catch different failures. An engineer can hold the claim and still be looking at a
+stale work order; another can be up to date and have had the claim taken from them. Either
 check alone leaves a real hole, and there is a test per case.
 
 ## Running it
@@ -93,7 +106,7 @@ pnpm dev           # http://localhost:3002
 ```
 
 No database, no Redis, no browser. The service runs on in-memory adapters that enforce the
-same version and sequence guarantees the Postgres ones do, so two operators racing is a test
+same version and sequence guarantees the Postgres ones do, so two engineers racing is a test
 rather than something you reproduce by hand with two browser windows and good timing.
 
 `docker compose up -d` starts Postgres and Redis if you want to drive it against real
@@ -117,14 +130,14 @@ prevents.
 | Authorisation | Holder with current version, non-holder, taken over, stale view |
 | Racing | Both claim from version 0; exactly one wins, twice, for different reasons |
 | Messages | Names the holder, gives a countdown, never shows a negative one |
-| Over HTTP | Health, queue, claim, 409 conflicts, lapsed lease, both mutation guards, resume delta, two operators racing concurrently |
+| Over HTTP | Health, queue, claim, 409 conflicts, lapsed lease, both mutation guards, resume delta, two engineers racing concurrently |
 
 Recorded output: [docs/test-results/](docs/test-results/).
 
 ## Why not just reuse the flagship console
 
-The flagship's console is a product feature: it shows a queue, opens an incident, and
-lets an operator work it. It solves the concurrency problem well enough to ship.
+The flagship's console is a product feature: it shows a queue, opens a work order, and
+lets an engineer work it. It solves the concurrency problem well enough to ship.
 
 This repository takes the same problem and asks what happens at the edges: at the exact
 instant a lease expires, when a batch arrives reversed, when the resume point is computed
@@ -134,7 +147,7 @@ that are tedious to reproduce and easy to get wrong, and they are the whole cont
 ## Deliberately not here
 
 Accounts, mobile apps, subscriptions, billing, notification delivery, AWS. Devices are a
-generator script. If it is not about two operators touching one incident at the same time,
+generator script. If it is not about two engineers touching one work order at the same time,
 or about events arriving in the wrong order, it does not belong.
 
 ## Known limitations
@@ -146,8 +159,8 @@ or about events arriving in the wrong order, it does not belong.
   enforces the same version check, which is what makes the racing tests meaningful.
 - **The lease duration is a judgement call.** Five minutes, with no data to tune it
   against. Stated as a guess rather than presented as a finding.
-- **No fairness.** An operator who repeatedly claims and releases can monopolise an
-  incident. Visible in the audit log, not prevented.
+- **No fairness.** An engineer who repeatedly claims and releases can monopolise a
+  work order. Visible in the audit log, not prevented.
 - **Never deployed, and no Docker image has been built.** The Dockerfile and Compose file
   are written and neither has been run on this machine.
 
@@ -159,7 +172,7 @@ or about events arriving in the wrong order, it does not belong.
 
 ## Suggested repository metadata
 
-**Description:** Multi-operator incident console: event ordering, claim leases, optimistic
+**Description:** Multi-engineer work order console: event ordering, claim leases, optimistic
 concurrency and reconnection recovery, with tests for every failure mode.
 
 **Topics:** `typescript` `concurrency` `optimistic-locking` `event-sourcing` `websockets`

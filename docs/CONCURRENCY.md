@@ -12,17 +12,17 @@ Device clocks are wrong. A phone that has been offline can be minutes out, so or
 when the client says something happened produces an order that never happened.
 
 Server timestamps have insufficient resolution. Two events written in the same millisecond
-have no defined order, and the operator sees "resolved" above "note added".
+have no defined order, and the engineer sees "resolved" above "note added".
 
 Neither tells a reconnecting client what it missed. Asking for everything since a time
 either duplicates or races the clock.
 
 ### The mechanism
 
-A monotonic per-incident sequence, allocated inside the transaction that writes the event.
+A monotonic per-work order sequence, allocated inside the transaction that writes the event.
 Not by the application: if the application picked the number, two concurrent writers could
-both choose 7 and the timeline would fork. Postgres does this with a per-incident sequence
-and a unique constraint on `(incident_id, sequence)`.
+both choose 7 and the timeline would fork. Postgres does this with a per-work order sequence
+and a unique constraint on `(workOrder_id, sequence)`.
 
 Both fields are kept. `occurredAt` is what gets displayed; `sequence` is what everything
 orders by. That is why a backlog flushed twenty minutes late shows the times things
@@ -30,15 +30,15 @@ actually happened while still sorting correctly.
 
 ### The cost
 
-A sequence per incident is a hot row under concurrent writes to one incident. Fine at a
-handful of writes a second, which is what a busy incident produces.
+A sequence per work order is a hot row under concurrent writes to one work order. Fine at a
+handful of writes a second, which is what a busy work order produces.
 
 ## 2. Out-of-order arrival
 
 ### The problem
 
 Networks reorder. Applying event 9 while 8 is missing renders a note above the action it
-describes, which is worse than not rendering it yet: the operator reads a timeline that
+describes, which is worse than not rendering it yet: the engineer reads a timeline that
 misrepresents what happened.
 
 ### The mechanism
@@ -104,7 +104,7 @@ the connection that was already struggling, in exchange for bounded memory.
 
 ### The problem
 
-Two operators work the same incident and neither knows. Or one claims it, walks away, and
+Two engineers work the same work order and neither knows. Or one claims it, walks away, and
 it sits unavailable.
 
 ### The mechanism
@@ -118,7 +118,7 @@ This is the part worth reading twice. They catch different failures:
 
 | Situation | Version | Lease | Result |
 |-----------|---------|-------|--------|
-| Bob acts on an incident he loaded before Alice claimed it | stale | would also fail | Caught by version, which fires first |
+| Bob acts on a work order he loaded before Alice claimed it | stale | would also fail | Caught by version, which fires first |
 | Bob reloads, then tries to claim what Alice holds | current | held by Alice | Caught by lease |
 | Alice holds the claim but her tab is showing an old version | stale | held by her | Caught by version. She holds the claim and is still wrong |
 | Alice held it, Bob took over after expiry, Alice acts | current | held by Bob | Caught by lease. She is up to date and no longer entitled |
@@ -129,19 +129,19 @@ third; a design with only a version misses the fourth. Both rows have a test.
 ### The cost
 
 Two things to send on every mutation and two ways to be refused. The refusal messages are
-written as sentences rather than error codes for that reason: an operator under pressure
+written as sentences rather than error codes for that reason: an engineer under pressure
 needs to know what happened and what to do next.
 
 ## 6. What is not solved here
 
-**Fairness.** An operator who claims and releases repeatedly can monopolise an incident.
+**Fairness.** An engineer who claims and releases repeatedly can monopolise a work order.
 Visible in the audit log, not prevented.
 
 **Split brain across regions.** Single-region. Two regions each allocating sequences for
-the same incident would need a different mechanism entirely.
+the same work order would need a different mechanism entirely.
 
-**Causal ordering across incidents.** Sequences are per incident. Two incidents have no
+**Causal ordering across work orders.** Sequences are per work order. Two work orders have no
 defined relative order, and nothing in the product needs one.
 
-**Presence.** Whether an operator is currently looking at an incident, as distinct from
+**Presence.** Whether an engineer is currently looking at a work order, as distinct from
 holding a lease. Useful, out of scope.

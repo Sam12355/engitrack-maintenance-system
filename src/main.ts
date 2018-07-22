@@ -20,7 +20,7 @@ async function bootstrap(): Promise<void> {
   const port = Number(process.env.PORT ?? 3002);
   await app.listen(port);
 
-  process.stdout.write(`incident console listening on ${port}\n`);
+  process.stdout.write(`workOrder console listening on ${port}\n`);
   process.stdout.write('portfolio demonstration: this does not contact emergency services\n');
 }
 

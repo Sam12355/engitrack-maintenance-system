@@ -1,8 +1,8 @@
 {
-  "name": "guardianlink-incident-console",
+  "name": "engitrack-maintenance-system",
   "version": "0.1.0",
   "private": true,
-  "description": "Incident-command vertical slice: multi-operator concurrency, event ordering, claim leases and reconnection recovery.",
+  "description": "WorkOrder-command vertical slice: multi-engineer concurrency, event ordering, claim leases and reconnection recovery.",
   "license": "MIT",
   "engines": {
     "node": ">=20.11.0"

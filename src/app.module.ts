@@ -21,21 +21,21 @@ import type { Server, Socket } from 'socket.io';
 import { z } from 'zod';
 
 import type { ClaimError, ClaimState } from './claim';
-import type { IncidentEvent } from './event-stream';
+import type { WorkOrderEvent } from './event-stream';
 import {
   CLOCK,
   INCIDENT_STORE,
-  IncidentService,
+  WorkOrderService,
   type Clock,
-  type IncidentRecord,
-  type IncidentStore,
-} from './incident.service';
+  type WorkOrderRecord,
+  type WorkOrderStore,
+} from './work-order.service';
 
 /**
  * The runnable service.
  *
  * Deliberately thin. Everything that decides anything is in `event-stream.ts`,
- * `claim.ts` and `incident.service.ts`; this file is transport. Keeping it thin is what
+ * `claim.ts` and `workOrder.service.ts`; this file is transport. Keeping it thin is what
  * stops the concurrency logic drifting into a controller where it cannot be tested
  * without HTTP.
  */
@@ -44,61 +44,61 @@ import {
 
 /**
  * The default adapter. The Postgres one implements the same contract with the version
- * check in the UPDATE and `(incident_id, sequence)` unique.
+ * check in the UPDATE and `(workOrder_id, sequence)` unique.
  *
  * Node runs a request handler on one thread, so the check-then-write below is atomic in
  * the same way a transaction makes the SQL version atomic. That is what makes the racing
  * tests meaningful rather than decorative.
  */
 @Injectable()
-export class MemoryIncidentStore implements IncidentStore {
-  private readonly records = new Map<string, IncidentRecord>();
-  private readonly events = new Map<string, IncidentEvent[]>();
+export class MemoryWorkOrderStore implements WorkOrderStore {
+  private readonly records = new Map<string, WorkOrderRecord>();
+  private readonly events = new Map<string, WorkOrderEvent[]>();
 
-  async find(incidentId: string): Promise<IncidentRecord | null> {
-    return this.records.get(incidentId) ?? null;
+  async find(workOrderId: string): Promise<WorkOrderRecord | null> {
+    return this.records.get(workOrderId) ?? null;
   }
 
-  async create(incidentId: string): Promise<IncidentRecord> {
-    const record: IncidentRecord = {
-      id: incidentId,
-      claim: { incidentId, holderId: null, claimedAt: null, expiresAt: null, version: 0 },
+  async create(workOrderId: string): Promise<WorkOrderRecord> {
+    const record: WorkOrderRecord = {
+      id: workOrderId,
+      claim: { workOrderId, holderId: null, claimedAt: null, expiresAt: null, version: 0 },
       events: [],
     };
-    this.records.set(incidentId, record);
-    this.events.set(incidentId, []);
+    this.records.set(workOrderId, record);
+    this.events.set(workOrderId, []);
     return record;
   }
 
-  async saveClaim(incidentId: string, next: ClaimState, expectedVersion: number): Promise<boolean> {
-    const current = this.records.get(incidentId);
+  async saveClaim(workOrderId: string, next: ClaimState, expectedVersion: number): Promise<boolean> {
+    const current = this.records.get(workOrderId);
     if (current === undefined) return false;
     // The equivalent of WHERE version = $n. A mismatch means somebody committed first.
     if (current.claim.version !== expectedVersion) return false;
 
-    this.records.set(incidentId, { ...current, claim: next });
+    this.records.set(workOrderId, { ...current, claim: next });
     return true;
   }
 
   async appendEvent(
-    incidentId: string,
-    event: Omit<IncidentEvent, 'sequence'>,
-  ): Promise<IncidentEvent> {
-    const existing = this.events.get(incidentId) ?? [];
+    workOrderId: string,
+    event: Omit<WorkOrderEvent, 'sequence'>,
+  ): Promise<WorkOrderEvent> {
+    const existing = this.events.get(workOrderId) ?? [];
     // Allocated here, by the store, never by the caller. Two writers cannot both decide
     // they are number seven.
-    const stored: IncidentEvent = { ...event, sequence: existing.length + 1 };
-    this.events.set(incidentId, [...existing, stored]);
+    const stored: WorkOrderEvent = { ...event, sequence: existing.length + 1 };
+    this.events.set(workOrderId, [...existing, stored]);
     return stored;
   }
 
-  async eventsAfter(incidentId: string, sequence: number, limit: number): Promise<IncidentEvent[]> {
-    return (this.events.get(incidentId) ?? [])
+  async eventsAfter(workOrderId: string, sequence: number, limit: number): Promise<WorkOrderEvent[]> {
+    return (this.events.get(workOrderId) ?? [])
       .filter((event) => event.sequence > sequence)
       .slice(0, limit);
   }
 
-  async list(limit: number, cursor: string | null): Promise<{ items: IncidentRecord[]; nextCursor: string | null }> {
+  async list(limit: number, cursor: string | null): Promise<{ items: WorkOrderRecord[]; nextCursor: string | null }> {
     const all = [...this.records.values()].sort((a, b) => a.id.localeCompare(b.id));
     const start = cursor === null ? 0 : all.findIndex((record) => record.id === cursor) + 1;
     const page = all.slice(start, start + limit);
@@ -117,7 +117,7 @@ export class SystemClock implements Clock {
 
 // --- HTTP ---------------------------------------------------------------------------
 
-const claimSchema = z.object({ operatorId: z.string().min(1), expectedVersion: z.number().int().min(0) });
+const claimSchema = z.object({ engineerId: z.string().min(1), expectedVersion: z.number().int().min(0) });
 const noteSchema = claimSchema.extend({ note: z.string().trim().min(1).max(2000) });
 
 function statusFor(error: ClaimError | { kind: 'not_found' }): number {
@@ -127,7 +127,7 @@ function statusFor(error: ClaimError | { kind: 'not_found' }): number {
     case 'held_by_other':
     case 'stale_version':
       // Conflict rather than 412: the client sent a version in the body and lost a race.
-      // The response carries what it needs to reload and show the operator what changed.
+      // The response carries what it needs to reload and show the engineer what changed.
       return HttpStatus.CONFLICT;
     case 'not_holder':
       return HttpStatus.FORBIDDEN;
@@ -139,19 +139,19 @@ function statusFor(error: ClaimError | { kind: 'not_found' }): number {
   }
 }
 
-@Controller('api/incidents')
-export class IncidentController {
+@Controller('api/workOrders')
+export class WorkOrderController {
   constructor(
-    private readonly incidents: IncidentService,
-    @Inject(INCIDENT_STORE) private readonly store: IncidentStore,
+    private readonly workOrders: WorkOrderService,
+    @Inject(INCIDENT_STORE) private readonly store: WorkOrderStore,
   ) {}
 
   @Get()
   async queue(@Query('limit') limit?: string, @Query('cursor') cursor?: string) {
-    return this.incidents.queue(Math.min(Number(limit ?? 25) || 25, 100), cursor ?? null);
+    return this.workOrders.queue(Math.min(Number(limit ?? 25) || 25, 100), cursor ?? null);
   }
 
-  /** A synthetic device raising an incident. There is no real device in this repository. */
+  /** A synthetic device raising an workOrder. There is no real device in this repository. */
   @Post(':id')
   async create(@Param('id') id: string) {
     const existing = await this.store.find(id);
@@ -161,7 +161,7 @@ export class IncidentController {
   @Post(':id/claim')
   async claim(@Param('id') id: string, @Body() body: unknown) {
     const parsed = claimSchema.parse(body);
-    const result = await this.incidents.claimIncident(id, parsed.operatorId, parsed.expectedVersion);
+    const result = await this.workOrders.claimWorkOrder(id, parsed.engineerId, parsed.expectedVersion);
     if (!result.ok) throw new HttpException({ error: result.error }, statusFor(result.error));
     return result.value;
   }
@@ -169,7 +169,7 @@ export class IncidentController {
   @Post(':id/release')
   async release(@Param('id') id: string, @Body() body: unknown) {
     const parsed = claimSchema.parse(body);
-    const result = await this.incidents.releaseIncident(id, parsed.operatorId, parsed.expectedVersion);
+    const result = await this.workOrders.releaseWorkOrder(id, parsed.engineerId, parsed.expectedVersion);
     if (!result.ok) throw new HttpException({ error: result.error }, statusFor(result.error));
     return result.value;
   }
@@ -177,14 +177,14 @@ export class IncidentController {
   @Post(':id/notes')
   async addNote(@Param('id') id: string, @Body() body: unknown) {
     const parsed = noteSchema.parse(body);
-    const result = await this.incidents.addNote(id, parsed.operatorId, parsed.note, parsed.expectedVersion);
+    const result = await this.workOrders.addNote(id, parsed.engineerId, parsed.note, parsed.expectedVersion);
     if (!result.ok) throw new HttpException({ error: result.error }, statusFor(result.error));
     return result.value;
   }
 
   @Get(':id/resume')
   async resume(@Param('id') id: string, @Query('after') after?: string) {
-    const result = await this.incidents.resume(id, Number(after ?? 0) || 0);
+    const result = await this.workOrders.resume(id, Number(after ?? 0) || 0);
     if (!result.ok) throw new HttpException({ error: result.error }, statusFor(result.error));
     return result.value;
   }
@@ -208,35 +208,35 @@ export class HealthController {
  * nothing needs a full refetch unless the gap exceeds the window.
  */
 @WebSocketGateway({ cors: { origin: true } })
-export class IncidentGateway implements OnGatewayConnection {
+export class WorkOrderGateway implements OnGatewayConnection {
   @WebSocketServer() private server!: Server;
 
-  constructor(private readonly incidents: IncidentService) {}
+  constructor(private readonly workOrders: WorkOrderService) {}
 
   handleConnection(socket: Socket): void {
     void socket;
   }
 
-  @SubscribeMessage('incident.subscribe')
-  async subscribe(socket: Socket, payload: { incidentId: string }): Promise<void> {
-    await socket.join(`incident:${payload.incidentId}`);
+  @SubscribeMessage('workOrder.subscribe')
+  async subscribe(socket: Socket, payload: { workOrderId: string }): Promise<void> {
+    await socket.join(`workOrder:${payload.workOrderId}`);
   }
 
-  @SubscribeMessage('incident.resume')
-  async resume(socket: Socket, payload: { incidentId: string; lastSequence: number }): Promise<void> {
-    const result = await this.incidents.resume(payload.incidentId, payload.lastSequence);
+  @SubscribeMessage('workOrder.resume')
+  async resume(socket: Socket, payload: { workOrderId: string; lastSequence: number }): Promise<void> {
+    const result = await this.workOrders.resume(payload.workOrderId, payload.lastSequence);
     if (!result.ok) return;
 
-    await socket.join(`incident:${payload.incidentId}`);
-    socket.emit('incident.resumed', {
-      incidentId: payload.incidentId,
+    await socket.join(`workOrder:${payload.workOrderId}`);
+    socket.emit('workOrder.resumed', {
+      workOrderId: payload.workOrderId,
       events: result.value.events,
       truncated: result.value.truncated,
     });
   }
 
-  broadcast(incidentId: string, event: IncidentEvent): void {
-    this.server?.to(`incident:${incidentId}`).emit('incident.event', event);
+  broadcast(workOrderId: string, event: WorkOrderEvent): void {
+    this.server?.to(`workOrder:${workOrderId}`).emit('workOrder.event', event);
   }
 }
 
@@ -244,11 +244,11 @@ export class IncidentGateway implements OnGatewayConnection {
 
 
 @Module({
-  controllers: [IncidentController, HealthController],
+  controllers: [WorkOrderController, HealthController],
   providers: [
-    IncidentService,
-    IncidentGateway,
-    { provide: INCIDENT_STORE, useClass: MemoryIncidentStore },
+    WorkOrderService,
+    WorkOrderGateway,
+    { provide: INCIDENT_STORE, useClass: MemoryWorkOrderStore },
     { provide: CLOCK, useClass: SystemClock },
   ],
 })

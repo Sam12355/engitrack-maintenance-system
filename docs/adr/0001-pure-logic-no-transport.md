@@ -7,10 +7,10 @@
 
 The brief specifies React, Next.js, Apollo, NestJS, Postgres, Redis, Socket.IO, MapLibre
 and Docker for this repository. Building all of that would produce a second, smaller copy
-of the flagship's operator console.
+of the flagship's engineer console.
 
-The problem this repository is actually about is narrower: what an incident console does
-when events arrive twice, out of order, with a gap, while a second operator mutates the
+The problem this repository is actually about is narrower: what a work order console does
+when events arrive twice, out of order, with a gap, while a second engineer mutates the
 same record.
 
 ## Decision
@@ -21,7 +21,7 @@ in the flagship, which already has them.
 
 ## Why
 
-Reproducing "two operators race for the same incident, one from a stale view" through a
+Reproducing "two engineers race for the same work order, one from a stale view" through a
 running stack means a database, a socket server, two browser sessions and precise timing.
 It is possible, and it is the kind of test that gets written once and then skipped when it
 turns flaky.
