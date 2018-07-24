@@ -161,8 +161,9 @@ or about events arriving in the wrong order, it does not belong.
   against. Stated as a guess rather than presented as a finding.
 - **No fairness.** An engineer who repeatedly claims and releases can monopolise a
   work order. Visible in the audit log, not prevented.
-- **Never deployed, and no Docker image has been built.** The Dockerfile and Compose file
-  are written and neither has been run on this machine.
+- **Never deployed.** The image builds and serves `/health` on this machine; see
+  [docs/test-results/](docs/test-results/). Compose with real Postgres and Redis has not
+  been brought up, and nothing has been deployed anywhere.
 
 ## Further reading
 
