@@ -12,9 +12,10 @@ checkout, stop and report that rather than building on a broken baseline.
 
 ## The workflow
 
-Specification first for anything beyond a one-line fix. `docs/specs/`, following
-[docs/ai/TASK_TEMPLATE.md](docs/ai/TASK_TEMPLATE.md). It is not ceremony: it is what makes
-review possible and what stops AI assistance turning into unreviewed code.
+Specification first for anything beyond a one-line fix, written into `docs/specs/`: scope,
+affected systems, acceptance criteria, security considerations, the tests it needs, and what
+done means. It is not ceremony. It is what a reviewer reads the diff against, and without it
+review collapses into "does this look reasonable".
 
 Small commits, Conventional Commits, one logical change each.
 
@@ -36,8 +37,8 @@ covered at the same level as happy paths.
 
 Tests are written **from the acceptance criteria, before the implementation**. A test
 written afterwards asserts what the code does, which is not the same as what it should do.
-That ordering has caught real bugs across this portfolio; the record is in
-`estateflow-property-portal/AI_WORKLOG.md`.
+That ordering has caught real bugs in this portfolio, several of which are named in the
+test suites after the failure they prevent.
 
 ## Before opening a pull request
 
@@ -45,10 +46,5 @@ That ordering has caught real bugs across this portfolio; the record is in
 pnpm lint && pnpm typecheck && pnpm test
 ```
 
-Then read your own diff against [docs/ai/REVIEW_CHECKLIST.md](docs/ai/REVIEW_CHECKLIST.md).
+Then read your own diff against the checklist in the pull request template.
 
-## Using an AI agent
-
-Encouraged, with the conditions in [CLAUDE.md](CLAUDE.md) and
-[docs/ai/SECURITY_RULES.md](docs/ai/SECURITY_RULES.md). A written spec comes first,
-generated code is read line by line, and "it compiles" is not evidence of anything.

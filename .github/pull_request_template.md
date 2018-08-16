@@ -27,7 +27,7 @@ Tick only what you actually ran, and paste the output for anything that is not o
 
 ## Review checklist
 
-The reviewer works through `docs/ai/REVIEW_CHECKLIST.md`. The author fills this in first.
+The author fills this in before asking for review.
 
 - [ ] **Authorisation**: every new read and write checks ownership in the service layer,
       not only the route guard
@@ -40,12 +40,6 @@ The reviewer works through `docs/ai/REVIEW_CHECKLIST.md`. The author fills this 
 - [ ] **Migrations**: forward-only, additive, safe to run while the old version is live
 - [ ] **Backward compatibility**: no field removed or renamed without a deprecation path
 - [ ] **Tests**: the failure path is covered, not only the happy path
-
-## If AI assistance was used
-
-- [ ] A written spec existed first
-- [ ] Generated code was reviewed line by line, not accepted because it compiled
-- [ ] `AI_WORKLOG.md` records what was rejected and what was corrected
 
 ## Anything the reviewer should look at hardest
 
