@@ -3,8 +3,7 @@
 **What happens when two engineers work the same work order at once, on a connection that
 keeps dropping, with events arriving in the wrong order.**
 
-> Part of the [portfolio](../PORTFOLIO.md). A demonstration, not a system anybody schedules
-> maintenance with.
+> A demonstration, not a system anybody schedules maintenance with.
 
 > **A reconstruction, not an employer's codebase.** I worked on engineering maintenance
 > software in 2015 and 2016, and the console was where the interesting failures lived: two
